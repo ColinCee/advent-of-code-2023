@@ -1,8 +1,18 @@
 use std::collections::HashMap;
 
+
+use std::fmt;
+
+impl fmt::Debug for Trie {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Trie {{ end_of_word: {}, children: {:?} }}", 
+            self.end_of_word, 
+            self.children.keys().collect::<Vec<&char>>())
+    }
+}
 pub struct Trie {
-    end_of_word: bool,
-    children: HashMap<char, Trie>,
+    pub end_of_word: bool,
+    pub children: HashMap<char, Trie>,
 }
 
 impl Trie {

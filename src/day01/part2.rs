@@ -5,30 +5,22 @@ pub fn run() {
     let contents = fs::read_to_string("./src/day01/part1.txt")
         .expect("Something went wrong reading the file");
 
+    // // test contents bvdneightsevenfcjnhccrlb7nine
+    // let contents = "5vsrcnine";
     let trie = build_trie();
     let reverse_trie = build_reverse_trie();
-    // debug reverse_trie
-    // print each child starting with e
-    reverse_trie.print_children_starting_with("e");
-
 
     let mut total = 0;
     for line in contents.lines() {
         let first_num = find_first_number(line, &trie);
         let last_num = find_last_number(line, &reverse_trie);
-        println!("First number: {:?}, Last number: {:?}", first_num, last_num);
+        println!("line: {} First number: {:?}, Last number: {:?}",line, first_num, last_num);
         
         let concat_num = format!("{}{}", first_num.unwrap(), last_num.unwrap()).parse::<i32>().unwrap();
         total += concat_num;
     }
 
     println!("Total: {}", total);
-    // println!("First line: {:?}", first_line);
-    // let num = find_first_number(first_line);
-    // println!("First number: {:?}", num);
-
-    // let last_num = find_last_number(first_line);
-    // println!("Last number: {:?}", last_num);
 }
 
 fn build_trie() -> Trie {
@@ -59,61 +51,84 @@ pub fn get_words_map() -> HashMap<&'static str, i32> {
 }
 
 fn find_first_number(s: &str, trie: &Trie) -> Option<i32> {
-
-    let words_map = get_words_map();
-    let mut word = Vec::new();
-
     for (i, char) in s.chars().enumerate() {
         if char.is_digit(10) {
             return Some(char.to_digit(10).unwrap() as i32);
         }
 
-        let mut current_word = word.iter().collect::<String>();
-        let new_word = format!("{}{}", current_word, char);
-        let word_exists = trie.starts_with(&new_word);
-        println!("current_word: {}, new_word: {}, word_exists: {}", current_word, new_word, word_exists);
-        if !word_exists {
-            word.clear();
-            word.push(char);
-            continue;
-        }
-
-        word.push(char);
-        current_word = word.iter().collect::<String>();
-        if words_map.contains_key(current_word.as_str()) {
-            return Some(*words_map.get(current_word.as_str()).unwrap());
+        let substring_number = find_string_number_in_str(&s[i..], trie);
+        println!("substring_number: {:?}", substring_number);
+        if substring_number.is_some() {
+            return substring_number;
         }
     }
 
     None
 }
 
-fn find_last_number(s: &str, trie: &Trie) -> Option<i32> {
+fn find_string_number_in_str(s: &str, trie: &Trie) -> Option<i32> {
     let words_map = get_words_map();
-    let mut word: Vec<char> = Vec::new();
 
+    let mut word = String::new();
+    let mut node_exists = trie.children.get(&s.chars().nth(0).unwrap());
+
+    let mut i = 0;
+    while node_exists.is_some() {    
+        println!("currentChar: {} node_exists: {:?}", s.chars().nth(i).unwrap(), node_exists);
+        word.push(s.chars().nth(i).unwrap());
+        if node_exists.unwrap().end_of_word {
+            let number = words_map.get(&word[..]);
+            if number.is_some() {
+                return number.cloned();
+            }
+        }
+
+        i += 1;
+        node_exists = node_exists.unwrap().children.get(&s.chars().nth(i).unwrap());
+
+    }
+
+    None
+}
+
+fn find_last_number(s: &str, trie: &Trie) -> Option<i32> {
+    let reversed_s = s.chars().rev().collect::<String>();
     for (i, char) in s.chars().rev().enumerate() {
         if char.is_digit(10) {
             return Some(char.to_digit(10).unwrap() as i32);
         }
 
-        let mut current_word = word.iter().collect::<String>();
-        let new_word = format!("{}{}", current_word, char);
-        let word_exists = trie.starts_with(&new_word);
-        println!("char: {} current_word: {}, new_word: {}, word_exists: {}", char, current_word, new_word, word_exists);
+        let substring_number = find_last_string_number_in_str(&reversed_s[i..], trie);
+        // println!("substring_number: {:?}", substring_number);
+        if substring_number.is_some() {
+            return substring_number;
+        }
+    }
 
-        if !word_exists {
-            word.clear();
-            word.push(char);
-            continue;
+    None
+}
+
+fn find_last_string_number_in_str(s: &str, trie: &Trie) -> Option<i32> {
+    let words_map = get_words_map();
+
+    let mut word = String::new();
+    let mut node_exists = trie.children.get(&s.chars().nth(0).unwrap());
+
+    let mut i = 0;
+    while node_exists.is_some() {    
+        println!("currentChar: {} node_exists: {:?}", s.chars().nth(i).unwrap(), node_exists);
+        word.push(s.chars().nth(i).unwrap());
+        if node_exists.unwrap().end_of_word {
+            let reversed_word = word.chars().rev().collect::<String>();
+            let number = words_map.get(&reversed_word[..]);
+            if number.is_some() {
+                return number.cloned();
+            }
         }
 
-        word.push(char);
-        current_word = word.iter().rev().collect::<String>();
-        
-        if words_map.contains_key(current_word.as_str()) {
-            return Some(*words_map.get(current_word.as_str()).unwrap());
-        }
+        i += 1;
+        node_exists = node_exists.unwrap().children.get(&s.chars().nth(i).unwrap());
+
     }
 
     None
