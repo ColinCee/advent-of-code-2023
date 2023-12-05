@@ -82,7 +82,6 @@ fn find_dest_num(index: &mut usize, lines: &Vec<String>, source_num: &i64) -> i6
             && source_num.to_owned() <= map_line[1] + map_line[2] - 1
         {
             let diff = map_line[0] - map_line[1];
-            println!("diff {}", diff);
             return source_num + diff;
         }
 
