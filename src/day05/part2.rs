@@ -197,11 +197,15 @@ fn get_missing_dest_ranges(
         let current = sorted_covered_source_ranges[index];
 
         println!("current: {:?} source_range {:?}", current, source_range);
-        if current.start - 1 > source_range.start {
-            println!("MISSING LEFT");
+        if current.start == source_range.start && current.end == source_range.end {
+            return missing_dest_ranges;
+        }
+
+        if index == 0 && current.start > source_range.start {
+            println!("MISSING LEFT adding {}", format_number(source_range.start));
             missing_dest_ranges.push(SourceRange {
                 start: source_range.start,
-                end: current.start - 1,
+                end: current.start,
                 name: new_source_name.to_string(),
             });
         }
@@ -209,10 +213,10 @@ fn get_missing_dest_ranges(
         let next = sorted_covered_source_ranges.get(index + 1);
         println!("next: {:?}", next);
         if next.is_none() {
-            println!("MISSING RIGHT");
-            if current.end + 1 < source_range.end {
+            if current.end < source_range.end {
+                println!("MISSING RIGHT adding {}", format_number(current.end));
                 missing_dest_ranges.push(SourceRange {
-                    start: current.end + 1,
+                    start: current.end,
                     end: source_range.end,
                     name: new_source_name.to_string(),
                 });
@@ -221,11 +225,11 @@ fn get_missing_dest_ranges(
         }
 
         let next = next.unwrap();
-        if current.end + 1 < next.start - 1 {
-            println!("MISSING MIDDLE");
+        if current.end - next.start < -1 {
+            println!("MISSING MIDDLE RIGHT adding {}", format_number(current.end));
             missing_dest_ranges.push(SourceRange {
-                start: current.end + 1,
-                end: next.start - 1,
+                start: current.end,
+                end: next.start,
                 name: new_source_name.to_string(),
             });
         }
@@ -253,7 +257,7 @@ fn find_location_ranges_for_seed(
         // }
         // println!("~~~~~~~~~~~~~~~> dest_ranges: {:?}", dest_ranges);
         if dest_ranges.is_empty() {
-            if current.start == 0 {
+            if current.start == 3241039 {
                 panic!("current: {:?}", current);
             }
             locations.push(current);
