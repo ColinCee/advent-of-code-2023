@@ -1,18 +1,40 @@
 use crate::utils::read_file_lines::read_file_lines;
+use num_format::{Locale, ToFormattedString};
 use std::{
     borrow::Cow,
     cmp::{max, min},
     collections::{HashMap, HashSet},
-    vec,
+    fmt, vec,
 };
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+
+impl fmt::Debug for SourceRange {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SourceRange")
+            .field("start", &format_number(self.start))
+            .field("end", &format_number(self.end))
+            .field("name", &self.name)
+            .finish()
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 struct SourceRange {
     start: i64,
     end: i64,
     name: String,
 }
 
-#[derive(Debug)]
+impl fmt::Debug for MapRange {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SourceRange")
+            .field("source_start", &format_number(self.source_start))
+            .field("source_end", &format_number(self.source_end))
+            .field("dest_start", &format_number(self.dest_start))
+            .field("dest_end", &format_number(self.dest_end))
+            .field("name", &self.name)
+            .finish()
+    }
+}
 struct MapRange {
     source_start: i64,
     source_end: i64,
@@ -112,6 +134,15 @@ fn get_next_dest_ranges(
         dest_start = max(dest_start, map.dest_start);
         dest_end = min(dest_end, map.dest_end);
 
+        // debug log all the vars above
+        println!(
+            "source_range: {:?} map: {:?} dest_start: {} dest_end: {}",
+            source_range,
+            map,
+            format_number(dest_start),
+            format_number(dest_end)
+        );
+
         dest_ranges.push(SourceRange {
             start: dest_start,
             end: dest_end,
@@ -126,6 +157,7 @@ fn get_next_dest_ranges(
             name: source_range.name.clone(),
         });
     }
+    println!("dest ranges for current source range: {:?}", dest_ranges);
 
     // Unchanged source range
     if dest_ranges.is_empty() {
@@ -154,14 +186,19 @@ fn get_missing_dest_ranges(
         covered_source_ranges.iter().collect::<Vec<&SourceRange>>();
 
     sorted_covered_source_ranges.sort_by(|a, b| a.start.cmp(&b.start));
-
+    println!(
+        "sorted_covered_source_ranges: {:?}",
+        sorted_covered_source_ranges
+    );
     let mut missing_dest_ranges = Vec::new();
 
     let mut index = 0;
     while index < sorted_covered_source_ranges.len() {
         let current = sorted_covered_source_ranges[index];
 
-        if current.start > source_range.start {
+        println!("current: {:?} source_range {:?}", current, source_range);
+        if current.start - 1 > source_range.start {
+            println!("MISSING LEFT");
             missing_dest_ranges.push(SourceRange {
                 start: source_range.start,
                 end: current.start - 1,
@@ -170,8 +207,10 @@ fn get_missing_dest_ranges(
         }
 
         let next = sorted_covered_source_ranges.get(index + 1);
+        println!("next: {:?}", next);
         if next.is_none() {
-            if current.end < source_range.end {
+            println!("MISSING RIGHT");
+            if current.end + 1 < source_range.end {
                 missing_dest_ranges.push(SourceRange {
                     start: current.end + 1,
                     end: source_range.end,
@@ -182,7 +221,8 @@ fn get_missing_dest_ranges(
         }
 
         let next = next.unwrap();
-        if current.end < next.start {
+        if current.end + 1 < next.start - 1 {
+            println!("MISSING MIDDLE");
             missing_dest_ranges.push(SourceRange {
                 start: current.end + 1,
                 end: next.start - 1,
@@ -205,11 +245,17 @@ fn find_location_ranges_for_seed(
     let mut counter = 0;
     while !stack.is_empty() {
         let current = stack.pop().unwrap();
-
-        println!("====>> current: {:?}", current);
+        println!("================================================= {} ============================================== , {} - {}", current.name, format_number(current.start), format_number(current.end));
+        // println!("====>> current: {:?}", current);
         let dest_ranges = get_next_dest_ranges(&current, maps);
-        println!("~~~~~~~~~~~~~~~> dest_ranges: {:?}", dest_ranges);
+        // if dest_ranges.iter().any(|r| r.start == 0) {
+        //     panic!("dest_ranges: {:?}", dest_ranges);
+        // }
+        // println!("~~~~~~~~~~~~~~~> dest_ranges: {:?}", dest_ranges);
         if dest_ranges.is_empty() {
+            if current.start == 0 {
+                panic!("current: {:?}", current);
+            }
             locations.push(current);
             continue;
         }
@@ -250,6 +296,19 @@ pub fn run() {
     }
 
     locations.sort_by(|a, b| a.start.cmp(&b.start));
-    println!("locations: {:?}", locations);
+    // println!("locations: {:?}", locations);
     println!("min location: {:?}", locations.first().unwrap());
+}
+
+fn format_number(n: i64) -> String {
+    let s = n.to_string();
+    let mut result = String::new();
+    let len = s.len();
+    for (i, digit) in s.chars().enumerate() {
+        if i != 0 && (len - i) % 3 == 0 {
+            result.push(',');
+        }
+        result.push(digit);
+    }
+    result
 }
