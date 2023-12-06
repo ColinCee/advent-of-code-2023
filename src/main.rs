@@ -7,5 +7,5 @@ mod day05;
 mod utils;
 
 fn main() {
-    day05::part1::run(); // Uncomment to run part 1 of day 02
+    day05::part2::run(); // Uncomment to run part 1 of day 02
 }
