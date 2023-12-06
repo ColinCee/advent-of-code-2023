@@ -1,8 +1,8 @@
-use crate::utils::read_file::read_file;
+use crate::utils::read_file_lines::read_file_lines;
 use std::{cmp::min, collections::HashSet, vec};
 
 pub fn run() {
-    let lines = read_file("./src/day05/testData.txt");
+    let lines = read_file_lines("./src/day05/testData.txt");
 
     let seeds = get_seeds_pairs(&lines[0]);
 

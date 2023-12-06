@@ -1,8 +1,8 @@
-use crate::utils::read_file::read_file;
+use crate::utils::read_file_lines::read_file_lines;
 use std::collections::HashSet;
 
 pub fn run() {
-    let lines = read_file("./src/day05/inputData.txt");
+    let lines = read_file_lines("./src/day05/inputData.txt");
 
     let seeds = get_seeds_set(&lines[0]);
 

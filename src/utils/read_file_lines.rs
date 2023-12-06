@@ -4,7 +4,7 @@ use std::{
     path::Path,
 };
 
-pub fn read_file(pah: &str) -> Vec<String> {
+pub fn read_file_lines(pah: &str) -> Vec<String> {
     let path = Path::new(pah);
     let file = File::open(&path).unwrap();
     let reader = io::BufReader::new(file);
