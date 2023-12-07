@@ -70,46 +70,30 @@ fn get_value_of_card(card: char) -> i32 {
         _ => card.to_digit(10).unwrap() as i32,
     }
 }
-fn get_hand_ranking(hand: &Hand) -> u8 {
-    // five of a kind
-    // four of a kind
-    // full house
-    // three of a kind
-    // two pair
-    // one pair
-    // high card
 
+fn get_hand_ranking(hand: &Hand) -> u8 {
     let char_map = hand.cards.chars().fold(HashMap::new(), |mut acc, c| {
         *acc.entry(c).or_insert(0) += 1;
         acc
     });
 
-    // five of a kind
-    if char_map.len() == 1 {
-        return 6;
-    }
-
-    // either full house or four of a kind
-    if char_map.len() == 2 {
-        if char_map.values().any(|&v| v == 4) {
-            return 5;
+    match char_map.len() {
+        1 => 6, // five of a kind
+        2 => {
+            if char_map.values().any(|&v| v == 4) {
+                5 // four of a kind
+            } else {
+                4 // full house
+            }
         }
-
-        return 4;
-    }
-
-    // either three of a kind or two pair
-    if char_map.len() == 3 {
-        if char_map.values().any(|&v| v == 3) {
-            return 3;
+        3 => {
+            if char_map.values().any(|&v| v == 3) {
+                3 // three of a kind
+            } else {
+                2 // two pair
+            }
         }
-
-        return 2;
+        4 => 1, // one pair
+        _ => 0, // high card
     }
-
-    if char_map.len() == 4 {
-        return 1;
-    }
-
-    0
 }
