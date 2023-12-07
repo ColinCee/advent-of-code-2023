@@ -65,7 +65,7 @@ fn get_value_of_card(card: char) -> i32 {
         'A' => 14,
         'K' => 13,
         'Q' => 12,
-        'J' => 11, // special wildcard rule
+        'J' => 1, // special wildcard rule
         'T' => 10,
         _ => card.to_digit(10).unwrap() as i32,
     }
@@ -76,6 +76,65 @@ fn get_hand_ranking(hand: &Hand) -> u8 {
         *acc.entry(c).or_insert(0) += 1;
         acc
     });
+
+    if char_map.contains_key(&'J') {
+        let num_jacks = char_map.get(&'J').unwrap();
+        if num_jacks == &5 {
+            return 6; // five of a kind
+        }
+        let max_other_card_count = char_map
+            .iter()
+            .filter(|(&k, _)| k != 'J')
+            .map(|(_, &v)| v)
+            .max()
+            .unwrap();
+
+        if num_jacks == &4 {
+            return 6; // five of a kind
+        }
+
+        if num_jacks == &3 {
+            if max_other_card_count == 2 {
+                return 6; // Five of a kind
+            }
+
+            return 5; // Four of a kind
+        }
+
+        if num_jacks == &2 {
+            if max_other_card_count == 3 {
+                return 6; // Five of a kind
+            }
+
+            if max_other_card_count == 2 {
+                return 5; // Four of a kind
+            }
+
+            return 3; // Three of a kind
+        }
+
+        // num_jacks == 1
+        if max_other_card_count == 4 {
+            return 6; // Five of a kind
+        }
+
+        if max_other_card_count == 3 {
+            return 5; // Four of a kind
+        }
+
+        if max_other_card_count == 2 {
+            // check if there is another pair
+            let pair_count = char_map.iter().filter(|(_, &v)| v == 2).count();
+
+            if pair_count == 2 {
+                return 4; // Full house
+            }
+
+            return 3; // Three of a kind
+        }
+
+        return 1;
+    }
 
     match char_map.len() {
         1 => 6, // five of a kind
