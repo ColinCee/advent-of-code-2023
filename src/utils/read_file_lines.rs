@@ -1,6 +1,6 @@
 use std::{
-    fs::{read_to_string, File},
-    io::{self, BufRead, BufReader},
+    fs::File,
+    io::{self, BufRead},
     path::Path,
 };
 
