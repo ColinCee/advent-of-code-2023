@@ -14,10 +14,12 @@ use crate::utils::read_file_lines::read_file_lines;
 fn parse_line_to_graph(lines: &Vec<String>) -> (String, HashMap<String, HashSet<String>>) {
     let mut graph: HashMap<String, HashSet<String>> = HashMap::new();
     let mut start_id: String = "".to_string();
-    for i in 0..lines.len() {
-        let line = lines.get(i).unwrap();
+    let lines_len = lines.len();
 
-        for j in 0..line.len() {
+    for (i, line) in lines.iter().enumerate() {
+        let line_len = line.len();
+
+        for j in 0..line_len {
             let c = line.chars().nth(j).unwrap();
             let current_id = format!("{}-{}", i, j);
 
@@ -25,36 +27,86 @@ fn parse_line_to_graph(lines: &Vec<String>) -> (String, HashMap<String, HashSet<
                 start_id = current_id.clone();
             }
 
-            let children = match c {
-                '|' => vec![format!("{}-{}", i - 1, j), format!("{}-{}", i + 1, j)],
-                '-' => vec![format!("{}-{}", i, j + 1), format!("{}-{}", i, j - 1)],
-                'L' => vec![format!("{}-{}", i - 1, j), format!("{}-{}", i, j + 1)],
-                'J' => vec![format!("{}-{}", i - 1, j), format!("{}-{}", i, j - 1)],
-                '7' => vec![format!("{}-{}", i + 1, j), format!("{}-{}", i, j - 1)],
-                'F' => vec![format!("{}-{}", i + 1, j), format!("{}-{}", i, j + 1)],
-                _ => vec![],
-            };
+            let mut children = vec![];
+
+            match c {
+                '|' => {
+                    if i > 0 {
+                        children.push(format!("{}-{}", i - 1, j));
+                    }
+                    if i + 1 < lines_len {
+                        children.push(format!("{}-{}", i + 1, j));
+                    }
+                }
+                '-' => {
+                    if j + 1 < line_len {
+                        children.push(format!("{}-{}", i, j + 1));
+                    }
+                    if j > 0 {
+                        children.push(format!("{}-{}", i, j - 1));
+                    }
+                }
+                'L' => {
+                    if i > 0 {
+                        children.push(format!("{}-{}", i - 1, j));
+                    }
+                    if j + 1 < line_len {
+                        children.push(format!("{}-{}", i, j + 1));
+                    }
+                }
+                'J' => {
+                    if i > 0 {
+                        children.push(format!("{}-{}", i - 1, j));
+                    }
+                    if j > 0 {
+                        children.push(format!("{}-{}", i, j - 1));
+                    }
+                }
+                '7' => {
+                    if i + 1 < lines_len {
+                        children.push(format!("{}-{}", i + 1, j));
+                    }
+                    if j > 0 {
+                        children.push(format!("{}-{}", i, j - 1));
+                    }
+                }
+                'F' => {
+                    if i + 1 < lines_len {
+                        children.push(format!("{}-{}", i + 1, j));
+                    }
+                    if j + 1 < line_len {
+                        children.push(format!("{}-{}", i, j + 1));
+                    }
+                }
+                _ => {}
+            }
 
             // for each child of the node, add the current node as a child too
             for child_id in &children {
-                let child_node = graph.get_mut(child_id);
-                match child_node {
-                    Some(child_node) => {
-                        child_node.insert(current_id.clone());
-                    }
-                    None => {}
-                }
+                graph
+                    .entry(child_id.clone())
+                    .or_insert_with(HashSet::new)
+                    .insert(current_id.clone());
             }
 
-            let child_hashset: HashSet<String> = children.iter().map(|s| s.clone()).collect();
-            graph.insert(current_id.clone(), child_hashset);
+            let child_hashset: HashSet<String> = children.into_iter().collect();
+            println!(
+                "i {} j {} inserted child_hashset: {:?}",
+                i, j, child_hashset
+            );
+
+            graph
+                .entry(current_id.clone())
+                .or_insert_with(HashSet::new)
+                .extend(child_hashset);
         }
     }
 
+    println!("graph.len(): {}", graph.len());
+    assert!(graph.len() == lines_len * lines_len);
     (start_id, graph)
 }
-
-fn debug_print_furthest_nodes(lines: &Vec<String>, counts: &HashMap<String, i32>) {
+fn debug_print_furthest_nodes(lines: &Vec<String>, counts: &HashMap<String, i64>) {
     println!("counts: {:?}", counts);
     for i in 0..lines.len() {
         let mut line = "".to_string();
@@ -63,8 +115,8 @@ fn debug_print_furthest_nodes(lines: &Vec<String>, counts: &HashMap<String, i32>
             let current_id = format!("{}-{}", i, j);
             let current_count = counts.get(&current_id);
             let output = match current_count {
-                Some(count) => format!("{}", count.to_string()),
-                None => ".".to_string(),
+                Some(count) => format!("{}-", count.to_string()),
+                None => ".-".to_string(),
             };
             line.push_str(&output);
         }
@@ -75,9 +127,8 @@ fn debug_print_furthest_nodes(lines: &Vec<String>, counts: &HashMap<String, i32>
 fn count_steps_from_start(
     start_id: &String,
     graph: &HashMap<String, HashSet<String>>,
-    lines: &Vec<String>,
-) -> HashMap<String, i32> {
-    let mut current_counts: HashMap<String, i32> = HashMap::new();
+) -> HashMap<String, i64> {
+    let mut current_counts: HashMap<String, i64> = HashMap::new();
     current_counts.insert(start_id.clone(), 0);
 
     let mut queue: VecDeque<String> = VecDeque::new();
@@ -87,46 +138,48 @@ fn count_steps_from_start(
 
     while let Some(current_node_id) = queue.pop_front() {
         let current_node = graph.get(&current_node_id).unwrap();
-
-        // get the min from all the current nodes children
-        let current_count = current_node
-            .iter()
-            .map(|child_id| current_counts.get(child_id).unwrap_or(&i32::MAX))
-            .min()
-            .unwrap()
-            + 1;
-
-        current_counts.insert(current_node_id.clone(), current_count);
-
-        let children_to_visit: Vec<String> = current_node
-            .iter()
-            .filter(|child_id| !current_counts.contains_key(*child_id))
-            .map(|child_id| child_id.clone())
-            .collect();
-
-        for child_id in children_to_visit {
-            queue.push_back(child_id);
+        if current_counts.contains_key(&current_node_id) {
+            continue;
         }
+
+        for child_id in current_node {
+            queue.push_back(child_id.clone());
+        }
+
+        let min_counts = current_node
+            .iter()
+            .map(|child_id| current_counts.get(child_id))
+            .filter(|count| count.is_some())
+            .map(|count| count.unwrap())
+            .min();
+
+        if min_counts.is_none() {
+            println!("current_node {:?}", current_node);
+            panic!("min_counts is none for node: {}", current_node_id);
+        }
+
+        let current_count = min_counts.unwrap() + 1;
+        current_counts.insert(current_node_id.clone(), current_count);
     }
 
-    debug_print_furthest_nodes(&lines, &current_counts);
+    // debug_print_furthest_nodes(&lines, &current_counts);
     current_counts
 }
 
 pub fn run() {
     let lines = read_file_lines("src/day10/inputData.txt");
-
-    println!("lines: {:?}", lines);
-
     let (start_id, graph) = parse_line_to_graph(&lines);
-    // print all nodes with children
-    for (k, v) in &graph {
-        if !v.is_empty() {
-            println!("{}: {:?}", k, v);
-        }
-    }
 
-    let step_counts = count_steps_from_start(&start_id, &graph, &lines);
+    // println!("45-73 {:?}", graph.get("45-73"));
+    // print all nodes with children
+    // for (k, v) in &graph {
+    //     if !v.is_empty() {
+    //         println!("{}: {:?}", k, v);
+    //     }
+    // }
+
+    let step_counts = count_steps_from_start(&start_id, &graph);
+    debug_print_furthest_nodes(&lines, &step_counts);
     let max_steps = step_counts.values().max().unwrap();
     let max_node: String = step_counts
         .iter()
